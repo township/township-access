@@ -26,5 +26,9 @@ access.create(key, scopes, function (err, account) {
 })
 ```
 
+## See also
+- [township-auth](https://github.com/township/township-auth) - manage authentication credentials
+- [township-token](https://github.com/township/township-token) - create & decode JWT tokens with township auth/access data
+
 ## License
 [MIT](LICENSE.md)
