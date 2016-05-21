@@ -1,0 +1,38 @@
+{
+  "name": "township-access",
+  "version": "1.0.0",
+  "description": "An access control module to accompany township-auth",
+  "main": "index.js",
+  "scripts": {
+    "lint": "standard",
+    "test": "npm run lint && tape tests/*.js | tap-spec"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/township/township-access.git"
+  },
+  "keywords": [
+    "auth",
+    "permissions",
+    "access",
+    "login",
+    "authorization"
+  ],
+  "author": "sethvincent",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/township/township-access/issues"
+  },
+  "homepage": "https://github.com/township/township-access#readme",
+  "devDependencies": {
+    "memdb": "^1.3.1",
+    "standard": "^7.1.0",
+    "tap-spec": "^4.1.1",
+    "tape": "^4.5.1"
+  },
+  "dependencies": {
+    "sublevel": "^2.4.0",
+    "subleveldown": "^2.1.0",
+    "xtend": "^4.0.1"
+  }
+}
