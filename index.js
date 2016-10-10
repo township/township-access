@@ -32,7 +32,7 @@ module.exports = function townshipAccess (maindb) {
     })
   }
 
-  access.delete = function (key, callback) {
+  access.destroy = function (key, callback) {
     db.del(key, callback)
   }
 
