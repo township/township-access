@@ -1,16 +1,45 @@
-var sublevel = require('subleveldown')
+const sublevel = require('subleveldown')
+const createLock = require('level-lock')
 
-module.exports = function townshipAccess (maindb) {
-  var access = {}
-  var db = sublevel(maindb, 'township-access', { valueEncoding: 'json' })
-  access.db = db
+/**
+* Create a township access db
+* @name createTownshipAccess
+* @namespace townshipAccess
+* @param {object} leveldb - an instance of a leveldb created using [level](https://github.com/level/)
+* @return {object}
+* @example
+* const createTownshipAccess = require('township-access')
+* const level = require('level')
+*
+* const db = level('./db')
+* const access = createTownshipAccess(db)
+*/
+module.exports = function createTownshipAccess (leveldb) {
+  const db = sublevel(leveldb, 'township-access', { valueEncoding: 'json' })
 
-  access.get = function (key, callback) {
+  /**
+  * Get a set of access scopes
+  *
+  * @name access.get
+  * @memberof townshipAccess
+  * @param {string} key - the key for the access scopes
+  * @param {function} callback - callback with `err`, `data` arguments
+  */
+  function get (key, callback) {
     db.get(key, callback)
   }
 
-  access.create = function (key, scopes, callback) {
-    var data = {
+  /**
+  * Create a set of access scopes
+  *
+  * @name access.create
+  * @memberof townshipAccess
+  * @param {string} key - the key for the access scopes
+  * @param {array} scopes - array of strings
+  * @param {function} callback - callback with `err`, `data` arguments
+  */
+  function create (key, scopes, callback) {
+    const data = {
       key: key,
       scopes: scopes
     }
@@ -21,45 +50,117 @@ module.exports = function townshipAccess (maindb) {
     })
   }
 
-  access.update = function (key, scopes, callback) {
-    access.get(key, function (err, account) {
+  /**
+  * Update a set of access scopes
+  *
+  * @name access.update
+  * @memberof townshipAccess
+  * @param {string} key - the key for the access scopes
+  * @param {array} scopes - array of strings
+  * @param {function} callback - callback with `err`, `data` arguments
+  */
+  function update (key, scopes, callback) {
+    const unlock = lock(key)
+
+    get(key, function (err, account) {
       if (err) return callback(err)
       account.scopes = scopes
+
       db.put(key, account, function (err) {
+        unlock()
         if (err) return callback(err)
         else callback(null, account)
       })
     })
   }
 
-  access.destroy = function (key, callback) {
+  /**
+  * Delete a set of access scopes
+  *
+  * @name access.destroy
+  * @memberof townshipAccess
+  * @param {string} key - the key for the access scopes
+  * @param {function} callback - callback with `err`, `data` arguments
+  */
+  function destroy (key, callback) {
     db.del(key, callback)
   }
 
-  access.verify = function (key, scopes, callback) {
+  /**
+  * Verify that a set of scopes match what is in the db for a key
+  *
+  * @name access.verify
+  * @memberof townshipAccess
+  * @param {string} key - the key for the access scopes
+  * @param {array} scopes - array of strings with scopes that must match
+  * @param {function} callback - callback with `err`, `data` arguments
+  */
+  function verify (key, scopes, callback) {
     db.get(key, function (err, account) {
       if (err) return callback(err)
-      var scopeAccess = access.verifyScopes(account, scopes)
+      var scopeAccess = verifyScopes(account, scopes)
       if (scopeAccess) return callback(null, account)
       else callback(new Error('Access denied'))
     })
   }
 
-  access.verifyScopes = function (account, scopes) {
-    var i = 0
-    var l = scopes.length
+  /**
+  * Verify that a set of scopes match what is available in an object with a scopes property
+  *
+  * @name access.verifyScopes
+  * @memberof townshipAccess
+  * @param {object} data
+  * @param {array} data.scopes - array of strings
+  * @param {array} scopes - array of strings with scopes that must match
+  * @return {boolean} returns `true` if `scopes` are all found in `data.scopes`
+  */
+  function verifyScopes (data, scopes) {
+    let i = 0
+    const l = scopes.length
+
     for (i; i < l; i++) {
-      if (!access.verifyScope(account, scopes[i])) return false
+      if (!verifyScope(data, scopes[i])) return false
     }
+
     return true
   }
 
-  access.verifyScope = function (account, scope) {
-    if (!account || !scope) return false
-    var accountScopes = account.scopes.join(',')
-    if (accountScopes.indexOf(scope) === -1) return false
-    return true
+  /**
+  * Verify that a scope matches what is available in an object with a scopes property
+  *
+  * @name access.verifyScope
+  * @memberof townshipAccess
+  * @param {string} key - the key for the access scopes
+  * @param {function} callback - callback with `err`, `data` arguments
+  * @return {boolean} returns `true` if `scope` is found in `data.scopes`
+  */
+  function verifyScope (account, scope) {
+    if (!account || !account.scopes || !account.scopes.length || !scope) return false
+    return account.scopes.includes(scope)
   }
 
-  return access
+  /**
+  * Lock an access db key while performing an operation on it
+  *
+  * @name access.lock
+  * @memberof townshipAccess
+  * @param {string} key - the key for the access scopes
+  * @param {string} [mode=w] - can be `r`, `w`, or `rw`, default is `w`
+  * @return {boolean} returns `true` if `scope` is found in `data.scopes`
+  */
+  function lock (key, mode) {
+    return createLock(db, key, mode)
+  }
+
+  return {
+    db,
+    get,
+    create,
+    update,
+    destroy,
+    verify,
+    verifyScope,
+    verifyScopes,
+    lock
+  }
 }
