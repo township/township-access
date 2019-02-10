@@ -63,7 +63,11 @@ module.exports = function createTownshipAccess (leveldb) {
     const unlock = lock(key)
 
     get(key, function (err, account) {
-      if (err) return callback(err)
+      if (err) {
+        unlock()
+        return callback(err)
+      }
+
       account.scopes = scopes
 
       db.put(key, account, function (err) {
